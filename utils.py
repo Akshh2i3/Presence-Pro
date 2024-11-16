@@ -28,14 +28,10 @@ def initialize_db():
 def save_face_encoding(student_id, encoding):
     try:
         # Check if the file exists and read its content
-        if os.path.exists("models/face_encodings.pkl"):
+        data = {}
+        if os.path.exists("models/face_encodings.pkl") and os.path.getsize("models/face_encodings.pkl") > 0:
             with open("models/face_encodings.pkl", "rb") as f:
-                if os.path.getsize("models/face_encodings.pkl") > 0:
-                    data = pickle.load(f)
-                else:
-                    data = {}
-        else:
-            data = {}
+                data = pickle.load(f)
 
         # Save the new encoding
         data[student_id] = encoding
@@ -51,11 +47,7 @@ def load_face_encodings():
 
     try:
         with open("models/face_encodings.pkl", "rb") as f:
-            if os.path.getsize("models/face_encodings.pkl") > 0:
-                data = pickle.load(f)
-            else:
-                # Return empty lists if the file is empty
-                return [], []
+            data = pickle.load(f)
     except (EOFError, pickle.UnpicklingError):
         print("Warning: face_encodings.pkl is either empty or corrupted. Reinitializing.")
         return [], []
