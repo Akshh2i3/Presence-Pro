@@ -1,5 +1,6 @@
 import sqlite3
 import pickle
+import os
 
 def initialize_db():
     conn = sqlite3.connect("models/student_data.db")
@@ -26,20 +27,37 @@ def initialize_db():
 
 def save_face_encoding(student_id, encoding):
     try:
-        with open("models/face_encodings.pkl", "rb") as f:
-            data = pickle.load(f)
-    except FileNotFoundError:
-        data = {}
+        # Check if the file exists and read its content
+        if os.path.exists("models/face_encodings.pkl"):
+            with open("models/face_encodings.pkl", "rb") as f:
+                if os.path.getsize("models/face_encodings.pkl") > 0:
+                    data = pickle.load(f)
+                else:
+                    data = {}
+        else:
+            data = {}
 
-    data[student_id] = encoding
-    with open("models/face_encodings.pkl", "wb") as f:
-        pickle.dump(data, f)
+        # Save the new encoding
+        data[student_id] = encoding
+        with open("models/face_encodings.pkl", "wb") as f:
+            pickle.dump(data, f)
+        print(f"Face encoding for student ID {student_id} saved successfully.")
+    except Exception as e:
+        print(f"Error saving face encoding: {e}")
 
 def load_face_encodings():
+    if not os.path.exists("models/face_encodings.pkl"):
+        return [], []
+
     try:
         with open("models/face_encodings.pkl", "rb") as f:
-            data = pickle.load(f)
-    except FileNotFoundError:
+            if os.path.getsize("models/face_encodings.pkl") > 0:
+                data = pickle.load(f)
+            else:
+                # Return empty lists if the file is empty
+                return [], []
+    except (EOFError, pickle.UnpicklingError):
+        print("Warning: face_encodings.pkl is either empty or corrupted. Reinitializing.")
         return [], []
 
     student_data = []
@@ -57,9 +75,13 @@ def load_face_encodings():
     return student_data, known_encodings
 
 def mark_attendance(student_id, subject, time_slot):
-    conn = sqlite3.connect("models/student_data.db")
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO attendance (student_id, subject, time_slot) VALUES (?, ?, ?)",
-                   (student_id, subject, time_slot))
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect("models/student_data.db")
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO attendance (student_id, subject, time_slot) VALUES (?, ?, ?)",
+                       (student_id, subject, time_slot))
+        conn.commit()
+        conn.close()
+        print(f"Attendance marked for student ID {student_id} for {subject} at {time_slot}.")
+    except sqlite3.Error as e:
+        print(f"Error marking attendance: {e}")
